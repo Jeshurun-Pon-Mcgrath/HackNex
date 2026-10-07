@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prooflens-backend"
+version = "0.4.0"
+description = "ProofLens Phase 4 secure dataset ingestion and analysis planning API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.115.12",
+  "uvicorn[standard]==0.34.2",
+  "pydantic==2.11.4",
+  "pydantic-settings==2.9.1",
+  "python-multipart==0.0.20",
+  "polars==1.29.0",
+  "openpyxl==3.1.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx==0.28.1",
+  "pytest==8.3.5",
+  "pytest-asyncio==0.26.0",
+  "ruff==0.11.9",
+  "mypy==1.15.0",
+  "types-openpyxl==3.1.5.20250516",
+]
+
+[project.scripts]
+prooflens-cleanup = "app.cleanup:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

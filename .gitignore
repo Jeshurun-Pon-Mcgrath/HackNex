@@ -1,0 +1,40 @@
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Frontend dependencies and generated output
+node_modules/
+dist/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Runtime dataset and database files
+backend/data/*
+!backend/data/.gitkeep
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Editor and operating-system metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

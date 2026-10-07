@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Zynex">
+  <rect width="64" height="64" rx="8" fill="#1E293B"/>
+  <path d="M17 17h30v8L28.5 39H47v8H17v-8l18.5-14H17z" fill="#fff"/>
+  <path d="M47 17v8h-8" fill="none" stroke="#3B82F6" stroke-width="4"/>
+</svg>
