@@ -50,37 +50,37 @@ Zynex treats the language model as a **planner and code writer only**. The model
 what number the user sees. Every number comes from executing code, and every safety decision is
 made by deterministic Python:
 
-| Feature | What it does | Trap it targets |
-|---|---|---|
-| **Trap scanner** | A deterministic scan, with no LLM, that runs before any question. It flags duplicate rows, missing markers (`""`, `N/A`, `null`, `-`), mixed currencies in one column, DD/MM vs MM/DD dates, and cross-table contradictions on shared ID keys. The agent must handle every flagged trap its code touches, or it refuses. | duplicates, missing data, units, dates, contradictions |
-| **Premise Audit** | The question's premises (columns, named values, dates, periods) are extracted and checked against the data before any code is written. "Revenue on Feb 30" or "revenue in 2023" (no 2023 data) produce a refusal that names the failed premise. | trick and unanswerable questions |
-| **Interpretation Matrix** | When the answer depends on a choice no document resolves, such as how to read `02/03/2024`, every reading is computed as its own proof. If all readings agree, the answer stands. If they disagree, the user sees each answer next to its assumption and picks one. | ambiguity |
-| **Number Firewall** | The model may not type numbers. Explanations use `{{answer}}` placeholders filled from script output. A digit that appears in neither the question nor a document is rejected. | invented numbers |
-| **Code checks** | Regex lints, a currency-unit check and a named-entity coverage check catch pandas mistakes that silently give wrong numbers. When one fires, the plan is sent back with specific advice. | wrong math without an error |
-| **Proof Strength L0–L3** | An evidence ladder instead of a model "confidence": L1 the script runs, L2 a fresh-process re-run gives identical output with inputs pinned by SHA-256, L3 every interpretation agrees. | trust signal |
-| **Judge kit** | A zip of the data, every proof script, `claims.json` and a stdlib-only `verify_all.py`. One command re-checks every claim. | "can someone else run it?" |
+| Feature                   | What it does                                                                                                                                                                                                                                                                                                             | Trap it targets                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| **Trap scanner**          | A deterministic scan, with no LLM, that runs before any question. It flags duplicate rows, missing markers (`""`, `N/A`, `null`, `-`), mixed currencies in one column, DD/MM vs MM/DD dates, and cross-table contradictions on shared ID keys. The agent must handle every flagged trap its code touches, or it refuses. | duplicates, missing data, units, dates, contradictions |
+| **Premise Audit**         | The question's premises (columns, named values, dates, periods) are extracted and checked against the data before any code is written. "Revenue on Feb 30" or "revenue in 2023" (no 2023 data) produce a refusal that names the failed premise.                                                                          | trick and unanswerable questions                       |
+| **Interpretation Matrix** | When the answer depends on a choice no document resolves, such as how to read `02/03/2024`, every reading is computed as its own proof. If all readings agree, the answer stands. If they disagree, the user sees each answer next to its assumption and picks one.                                                      | ambiguity                                              |
+| **Number Firewall**       | The model may not type numbers. Explanations use `{{answer}}` placeholders filled from script output. A digit that appears in neither the question nor a document is rejected.                                                                                                                                           | invented numbers                                       |
+| **Code checks**           | Regex lints, a currency-unit check and a named-entity coverage check catch pandas mistakes that silently give wrong numbers. When one fires, the plan is sent back with specific advice.                                                                                                                                 | wrong math without an error                            |
+| **Proof Strength L0–L3**  | An evidence ladder instead of a model "confidence": L1 the script runs, L2 a fresh-process re-run gives identical output with inputs pinned by SHA-256, L3 every interpretation agrees.                                                                                                                                  | trust signal                                           |
+| **Judge kit**             | A zip of the data, every proof script, `claims.json` and a stdlib-only `verify_all.py`. One command re-checks every claim.                                                                                                                                                                                               | "can someone else run it?"                             |
 
 ### Technologies, libraries and model
 
 The versions below come from `backend/pyproject.toml`, `backend/requirements.txt` and
 `frontend/package-lock.json`. The lockfiles and pinned runtime requirements are the source of truth.
 
-| Layer | Technology | Version or constraint | Use |
-|---|---|---|---|
-| Local model runtime | Ollama | External prerequisite | Runs the language model locally through `/api/chat`; no hosted AI API is required. |
-| Default model | Qwen 3 8B | `qwen3:8b` | Extracts premises, plans pandas analysis code and repairs failed code. It does not directly supply displayed numeric answers. |
-| Backend language | Python | `>=3.12,<3.13` | API, deterministic checks, proof generation and execution. |
-| API | FastAPI / Uvicorn | `0.115.12` / `0.34.2` | REST API, NDJSON streaming, validation and serving. |
-| Schemas and settings | Pydantic / pydantic-settings | `2.11.4` / `2.9.1` | Request models, response models and validated `APP_*` configuration. |
-| Data analysis | pandas / NumPy | `3.0.6` / `2.5.3` in `requirements.txt` | Table loading, deterministic transformations and generated proof execution. |
-| File support | openpyxl / pypdf / python-multipart | `3.1.5` / `6.19.0` / `0.0.20` | XLSX parsing, PDF text extraction and uploads. |
-| Model HTTP client | HTTPX | `0.28.1` | Calls local Ollama and checks model health. |
-| Frontend | React / React DOM | `19.3.0` | Browser UI. |
-| Frontend language/build | TypeScript / Vite | `6.0.3` / `8.3.3` | Strict type checking, development server and production bundle. |
-| Navigation/state | React Router / Zustand / TanStack Query | `7.18.4` / `5.0.15` / `5.104.1` | Routes, remembered workspace state and server-state queries. |
-| Styling/icons | Tailwind CSS / Lucide React | `4.3.3` / `1.52.0` | CSS reset/build integration and interface icons. The visual system itself is custom CSS. |
-| Backend quality | pytest / Ruff / mypy | `8.3.5` / `0.11.9` / `1.15.0` | Tests, lint/format checks and strict type checking. |
-| Frontend quality | Vitest / Testing Library / ESLint / Prettier | See `frontend/package.json` | UI tests, linting and formatting. |
+| Layer                   | Technology                                   | Version or constraint                   | Use                                                                                                                           |
+| ----------------------- | -------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Local model runtime     | Ollama                                       | External prerequisite                   | Runs the language model locally through `/api/chat`; no hosted AI API is required.                                            |
+| Default model           | Qwen 3 8B                                    | `qwen3:8b`                              | Extracts premises, plans pandas analysis code and repairs failed code. It does not directly supply displayed numeric answers. |
+| Backend language        | Python                                       | `>=3.12,<3.13`                          | API, deterministic checks, proof generation and execution.                                                                    |
+| API                     | FastAPI / Uvicorn                            | `0.115.12` / `0.34.2`                   | REST API, NDJSON streaming, validation and serving.                                                                           |
+| Schemas and settings    | Pydantic / pydantic-settings                 | `2.11.4` / `2.9.1`                      | Request models, response models and validated `APP_*` configuration.                                                          |
+| Data analysis           | pandas / NumPy                               | `3.0.6` / `2.5.3` in `requirements.txt` | Table loading, deterministic transformations and generated proof execution.                                                   |
+| File support            | openpyxl / pypdf / python-multipart          | `3.1.5` / `6.19.0` / `0.0.20`           | XLSX parsing, PDF text extraction and uploads.                                                                                |
+| Model HTTP client       | HTTPX                                        | `0.28.1`                                | Calls local Ollama and checks model health.                                                                                   |
+| Frontend                | React / React DOM                            | `19.3.0`                                | Browser UI.                                                                                                                   |
+| Frontend language/build | TypeScript / Vite                            | `6.0.3` / `8.3.3`                       | Strict type checking, development server and production bundle.                                                               |
+| Navigation/state        | React Router / Zustand / TanStack Query      | `7.18.4` / `5.0.15` / `5.104.1`         | Routes, remembered workspace state and server-state queries.                                                                  |
+| Styling/icons           | Tailwind CSS / Lucide React                  | `4.3.3` / `1.52.0`                      | CSS reset/build integration and interface icons. The visual system itself is custom CSS.                                      |
+| Backend quality         | pytest / Ruff / mypy                         | `8.3.5` / `0.11.9` / `1.15.0`           | Tests, lint/format checks and strict type checking.                                                                           |
+| Frontend quality        | Vitest / Testing Library / ESLint / Prettier | See `frontend/package.json`             | UI tests, linting and formatting.                                                                                             |
 
 Ollama receives schemas, sample values, document excerpts, the question and deterministic scan
 findings. The default model call uses JSON-schema output, `temperature: 0`, `seed: 7`,
@@ -96,7 +96,8 @@ supports structured JSON-schema output.
 ### Prerequisites
 
 - Python 3.12.x. The backend explicitly requires `>=3.12,<3.13`.
-- Node.js 20 or newer and npm. Node 24.10.0 and npm 11.6.1 were used for the latest local check.
+- Node.js `^20.19.0`, `>=22.12.0` or `>=24.0.0`, as required by the installed Vite toolchain,
+  plus npm. Node 24.10.0 and npm 11.6.1 were used for the latest local check.
 - [Ollama](https://ollama.com) with the configured model downloaded. The default is `qwen3:8b`.
 - Enough memory for the selected model. Requirements vary by model and quantization.
 
@@ -267,7 +268,9 @@ The history of every question asked about this data, plus **Download proof kit**
 
 - **No database.** A workspace is a directory, so proof scripts can open `orders.csv` by name,
   exactly as they will inside the judge kit.
-- **No cloud calls.** The LLM is a local Ollama model. Dataset rows never leave the machine.
+- **Local by default.** The default Ollama endpoint is on the same machine. Uploaded files remain
+  in the backend workspace; model context includes schemas, sample values and document text.
+  Pointing `APP_OLLAMA_URL` at a remote service changes that privacy boundary.
 - **Streaming.** `/ask` returns newline-delimited JSON events from a synchronous generator, so the
   UI shows progress during the 20–90 seconds a local model needs.
 
@@ -346,14 +349,14 @@ The scan runs over the **raw** text of every table: every cell is read as the or
 nothing is cleaned away before it is inspected. Each finding gets an ID (`T1`, `T2`, …), the tables
 and columns it affects, a message, a count and real examples.
 
-| Kind | How it is detected |
-|---|---|
-| `duplicate_rows` | Rows identical to an earlier row after trimming and lower-casing. |
-| `duplicate_key` | The first `*id` column repeats more often than whole rows do, so some IDs have conflicting rows. |
-| `missing_values` | Cells that are empty or a missing marker: `""`, `na`, `n/a`, `null`, `none`, `nan`, `-`, `--`. |
-| `mixed_currency` | One column contains more than one currency (`$`, `€`, `£`, `₹`, `¥` or ISO codes), or a `currency` column holds several codes next to numeric columns. |
-| `ambiguous_dates` | Date columns (60% or more of values look like dates) with slash dates where both day and month are ≤ 12, or a mix of ISO and slash formats. |
-| `contradiction` | Two tables share an `*id` key and another column, such as `region`, but disagree on that column's value for the same key. |
+| Kind              | How it is detected                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `duplicate_rows`  | Rows identical to an earlier row after trimming and lower-casing.                                                                                      |
+| `duplicate_key`   | The first `*id` column repeats more often than whole rows do, so some IDs have conflicting rows.                                                       |
+| `missing_values`  | Cells that are empty or a missing marker: `""`, `na`, `n/a`, `null`, `none`, `nan`, `-`, `--`.                                                         |
+| `mixed_currency`  | One column contains more than one currency (`$`, `€`, `£`, `₹`, `¥` or ISO codes), or a `currency` column holds several codes next to numeric columns. |
+| `ambiguous_dates` | Date columns (60% or more of values look like dates) with slash dates where both day and month are ≤ 12, or a mix of ISO and slash formats.            |
+| `contradiction`   | Two tables share an `*id` key and another column, such as `region`, but disagree on that column's value for the same key.                              |
 
 The findings go into the model's context. `scan.relevant()` later decides which findings a
 generated script actually touches: a finding counts when the code references the finding's file
@@ -363,6 +366,7 @@ generated script actually touches: a finding counts when the code references the
 
 The model gets the schema, sample values, the documents, the data's date range and the trap list.
 It returns JSON with:
+
 - **premises**, each one of these kinds:
   - `column`: a field the question needs, e.g. "profit";
   - `value`: a named entity, e.g. "Widgets";
@@ -371,6 +375,7 @@ It returns JSON with:
 - **decision**: `proceed`, or `refuse` for forecasts, opinions, causal claims or off-topic questions.
 
 Python then checks every premise:
+
 - **column:** a case-insensitive match against all table columns;
 - **value:** a case-insensitive substring search in every table and document;
 - **date:** a real calendar date, inside the data's date range;
@@ -385,6 +390,7 @@ not a real calendar date". No code is written.
 The model returns 1–4 **interpretations**. Each has a label, its assumptions and pandas code that
 assigns `result`. The plan also includes `traps_handled` (`[{id, how}]`), a unit, an explanation
 template and a clarifying question. The prompt includes:
+
 - the exact load snippet for each table, e.g. `pd.read_excel("customers.xlsx", sheet_name="Customers")`;
 - documentation for the trusted helpers, and a standard fix for each trap kind;
 - a generic worked example, deliberately not the demo data, so the prompt does not overfit.
@@ -392,15 +398,15 @@ template and a clarifying question. The prompt includes:
 Before anything runs, the plan must pass these deterministic checks. Each problem is sent back to
 the model as feedback, for up to 3 attempts:
 
-| Check | Fails when |
-|---|---|
-| Trap coverage | The code touches a finding (by `relevant()`) that `traps_handled` doesn't mention. The model may mark one "not relevant: reason". |
-| Number Firewall | The explanation contains a number that appears in neither the question nor a document. |
+| Check                | Fails when                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Trap coverage        | The code touches a finding (by `relevant()`) that `traps_handled` doesn't mention. The model may mark one "not relevant: reason".          |
+| Number Firewall      | The explanation contains a number that appears in neither the question nor a document.                                                     |
 | Lint: detached array | `x = np.where(...)` assigned to a plain variable. Later row filters won't apply to it, so a "March" total silently becomes the full total. |
-| Lint: dropping rows | `df[~is_missing(...)]` drops whole rows for one missing cell, losing valid quantities and dates. |
-| Lint: helper misuse | `df[col].is_missing()` instead of `is_missing(df[col])`. |
-| Unit check | The answer unit is a currency, but `result` aggregates a different currency's column, e.g. answering "in EUR" from `usd`. |
-| Entity coverage | The question names a value that exactly matches a data cell ("Widgets" → `Widget`), but the code never filters on it. |
+| Lint: dropping rows  | `df[~is_missing(...)]` drops whole rows for one missing cell, losing valid quantities and dates.                                           |
+| Lint: helper misuse  | `df[col].is_missing()` instead of `is_missing(df[col])`.                                                                                   |
+| Unit check           | The answer unit is a currency, but `result` aggregates a different currency's column, e.g. answering "in EUR" from `usd`.                  |
+| Entity coverage      | The question names a value that exactly matches a data cell ("Widgets" → `Widget`), but the code never filters on it.                      |
 
 If traps are still uncovered after 3 attempts, the agent refuses with `unhandled_trap`. A
 firewall leak that survives is replaced by the neutral template `The result is {{answer}}.`
@@ -427,18 +433,18 @@ then:
 Values are compared with `same()`: a relative tolerance of 1e-6 for numbers, recursive for dicts
 and lists, case-insensitive for strings.
 
-| Outcome | Status |
-|---|---|
-| A premise failed, the model refused, traps were uncovered, or no script ran | `refused`, with `code`, `reason` and `needed` |
-| Every successful interpretation gives the same value | `answered` |
-| Successful interpretations disagree | `ambiguous`: the Interpretation Matrix plus a clarifying question |
+| Outcome                                                                     | Status                                                            |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| A premise failed, the model refused, traps were uncovered, or no script ran | `refused`, with `code`, `reason` and `needed`                     |
+| Every successful interpretation gives the same value                        | `answered`                                                        |
+| Successful interpretations disagree                                         | `ambiguous`: the Interpretation Matrix plus a clarifying question |
 
-| Proof strength | Requirement |
-|---|---|
-| **L0 No claim** | Refused, so no number was produced. |
-| **L1 Runs** | At least one proof script ran. |
+| Proof strength      | Requirement                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| **L0 No claim**     | Refused, so no number was produced.                                                               |
+| **L1 Runs**         | At least one proof script ran.                                                                    |
 | **L2 Reproducible** | Every successful script gave identical output in a fresh process, and the inputs are hash-pinned. |
-| **L3 Robust** | Every interpretation ran, and all agree. |
+| **L3 Robust**       | Every interpretation ran, and all agree.                                                          |
 
 The explanation template is filled **only** from script output (`{{answer}}`,
 `{{interp_N.answer}}`). The run record is saved to `runs/<id>.json`.
@@ -484,29 +490,29 @@ print("PROOFLENS_RESULT=" + _json.dumps({"answer": _answer}))
 The helpers are copied into the script itself rather than imported, so the script needs only
 pandas and openpyxl and a reviewer can read every line that produced the number. They exist
 because small models get these steps wrong. For example, a hand-written cleanup that strips `$` and
-`€` *before* reading which currency each row was in can no longer convert the euro rows.
+`€` _before_ reading which currency each row was in can no longer convert the euro rows.
 
 ---
 
 ## 8. Backend components
 
-| Module | Responsibility and how it works |
-|---|---|
-| `app/main.py` | Builds the FastAPI app. The **lifespan** step creates `data/workspaces` and probes that the data folder is writable. Middleware rejects oversized uploads (`POST …/files` whose `Content-Length` exceeds the limit), adds `X-Request-ID` and `X-Content-Type-Options: nosniff`, and logs every request as JSON. CORS allows only the configured origins. |
-| `core/config.py` | `Settings`, read from `APP_*` environment variables and `.env`, with validation: no wildcard CORS, log level allowlist, the data folder can't be a filesystem root. |
-| `core/security.py` | `validate_original_filename`: allowed extensions plus `SAFE_NAME` (letters, digits, space, `_ - .`; no `..`), because proof scripts embed file names in code. `contained_path` resolves paths and rejects anything outside the workspace. `workspace_dir` accepts only a 32-hex ID that exists. |
-| `core/errors.py` | `AppError(status, code, message)` and handlers that return `{error_code, message, request_id}`. Unexpected errors are hidden behind a generic message. |
-| `validation.py` | **CSV:** must be UTF-8 and must not be a disguised zip or executable. **XLSX:** a valid zip with at most 10,000 entries and 200 MB expanded; no macros, embedded objects or encryption. |
-| `agent/workspace.py` | `save_upload` streams to a temporary file in 64 KB chunks with a size cap, validates it, then atomically replaces the destination. `load()` reads each CSV and each **visible** XLSX sheet twice: as typed pandas (the dtypes scripts will see) and as raw strings (for the scanner). It extracts text from MD, TXT and PDF documents (up to 6000 characters each) and SHA-256 hashes every file. |
-| `agent/scan.py` | The deterministic trap scanner (see [section 6](#6-how-a-question-is-answered-step-by-step)) and `relevant()`. |
-| `agent/premises.py` | `check()` for the four premise kinds. `data_date_range()` covers every date reading. `entities()` finds question words that exactly match a data cell (with plural forms), for the entity coverage check. |
-| `agent/llm.py` | One method, `json(system, user, schema)`. It calls Ollama `/api/chat` with the JSON schema as `format`, `think: false`, `temperature: 0`, `seed: 7` and `num_ctx: 12288`, then parses and validates the reply. Failures become `503 llm_unavailable` or `502 llm_bad_output`. |
-| `agent/pipeline.py` | All prompts and schemas, the deterministic checks (`firewall`, `lint`, `LINTS`, `WHICH`), formatting (`display`, `fill`) and the `Agent`: `ask()` (steps ①–③), `_prove()` (step ④) and `_finish()` (steps ⑤–⑥). Also `save_run` and `load_runs`. |
-| `agent/sandbox.py` | `gate()` (AST allowlist), `build_script()`, `run()` (subprocess and result parsing), `explain_error()` (maps tracebacks to the agent's line numbers) and `same()`. |
-| `agent/bundle.py` | `build()` writes the judge-kit zip in memory. |
-| `api/routes/workspaces.py` | Every product endpoint (see [section 9](#9-api-reference)). |
-| `api/routes/health.py` | A storage write probe plus an Ollama `/api/tags` check that the configured model is installed. |
-| `eval.py` | Runs every demo question through the real agent and scores it ([section 13](#13-demo-data-and-evaluation)). |
+| Module                     | Responsibility and how it works                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/main.py`              | Builds the FastAPI app. The **lifespan** step creates `data/workspaces` and probes that the data folder is writable. Middleware rejects oversized uploads (`POST …/files` whose `Content-Length` exceeds the limit), adds `X-Request-ID` and `X-Content-Type-Options: nosniff`, and logs every request as JSON. CORS allows only the configured origins.                                          |
+| `core/config.py`           | `Settings`, read from `APP_*` environment variables and `.env`, with validation: no wildcard CORS, log level allowlist, the data folder can't be a filesystem root.                                                                                                                                                                                                                               |
+| `core/security.py`         | `validate_original_filename`: allowed extensions plus `SAFE_NAME` (letters, digits, space, `_ - .`; no `..`), because proof scripts embed file names in code. `contained_path` resolves paths and rejects anything outside the workspace. `workspace_dir` accepts only a 32-hex ID that exists.                                                                                                   |
+| `core/errors.py`           | `AppError(status, code, message)` and handlers that return `{error_code, message, request_id}`. Unexpected errors are hidden behind a generic message.                                                                                                                                                                                                                                            |
+| `validation.py`            | **CSV:** must be UTF-8 and must not be a disguised zip or executable. **XLSX:** a valid zip with at most 10,000 entries and 200 MB expanded; no macros, embedded objects or encryption.                                                                                                                                                                                                           |
+| `agent/workspace.py`       | `save_upload` streams to a temporary file in 64 KB chunks with a size cap, validates it, then atomically replaces the destination. `load()` reads each CSV and each **visible** XLSX sheet twice: as typed pandas (the dtypes scripts will see) and as raw strings (for the scanner). It extracts text from MD, TXT and PDF documents (up to 6000 characters each) and SHA-256 hashes every file. |
+| `agent/scan.py`            | The deterministic trap scanner (see [section 6](#6-how-a-question-is-answered-step-by-step)) and `relevant()`.                                                                                                                                                                                                                                                                                    |
+| `agent/premises.py`        | `check()` for the four premise kinds. `data_date_range()` covers every date reading. `entities()` finds question words that exactly match a data cell (with plural forms), for the entity coverage check.                                                                                                                                                                                         |
+| `agent/llm.py`             | One method, `json(system, user, schema)`. It calls Ollama `/api/chat` with the JSON schema as `format`, `think: false`, `temperature: 0`, `seed: 7` and `num_ctx: 12288`, then parses and validates the reply. Failures become `503 llm_unavailable` or `502 llm_bad_output`.                                                                                                                     |
+| `agent/pipeline.py`        | All prompts and schemas, the deterministic checks (`firewall`, `lint`, `LINTS`, `WHICH`), formatting (`display`, `fill`) and the `Agent`: `ask()` (steps ①–③), `_prove()` (step ④) and `_finish()` (steps ⑤–⑥). Also `save_run` and `load_runs`.                                                                                                                                                  |
+| `agent/sandbox.py`         | `gate()` (AST allowlist), `build_script()`, `run()` (subprocess and result parsing), `explain_error()` (maps tracebacks to the agent's line numbers) and `same()`.                                                                                                                                                                                                                                |
+| `agent/bundle.py`          | `build()` writes the judge-kit zip in memory.                                                                                                                                                                                                                                                                                                                                                     |
+| `api/routes/workspaces.py` | Every product endpoint (see [section 9](#9-api-reference)).                                                                                                                                                                                                                                                                                                                                       |
+| `api/routes/health.py`     | A storage write probe plus an Ollama `/api/tags` check that the configured model is installed.                                                                                                                                                                                                                                                                                                    |
+| `eval.py`                  | Runs every demo question through the real agent and scores it ([section 13](#13-demo-data-and-evaluation)).                                                                                                                                                                                                                                                                                       |
 
 ---
 
@@ -514,31 +520,31 @@ because small models get these steps wrong. For example, a hand-written cleanup 
 
 Base URL: `http://127.0.0.1:8000/api/v1`. Errors return `{error_code, message, request_id}`.
 
-| Method and path | Purpose |
-|---|---|
-| `GET /health` | `status` (`ok`/`degraded`/`unavailable`), storage, `llm` (`available`/`model_missing`/`unavailable`), model. |
-| `POST /workspaces` | Create an empty workspace. Returns its summary. |
-| `POST /workspaces/demo` | Create a workspace preloaded with `demo/`. |
-| `GET /workspaces/{id}` | Summary: `files` (name, sha256), `tables` (name, load snippet, rows, columns with dtypes, preview rows), `documents` (name, excerpt) and `findings`. |
-| `POST /workspaces/{id}/files` | Upload one file (multipart field `file`). Returns the updated summary. A file with the same name is replaced, which invalidates its old proofs by design. |
-| `DELETE /workspaces/{id}/files/{name}` | Remove a file. |
-| `POST /workspaces/{id}/ask` | Body `{"question": "…"}` (3–1000 characters). Streams `application/x-ndjson` events (below). |
-| `GET /workspaces/{id}/runs` | Every run record, newest first. |
-| `POST /workspaces/{id}/runs/{run}/rerun` | Re-executes every stored proof script and returns `claimed`, `reproduced` and `match` for each. |
-| `POST /workspaces/{id}/runs/{run}/adopt` | Body `{"index": n}`. Resolves an ambiguous run by choosing interpretation `n`. |
-| `GET /workspaces/{id}/bundle.zip` | Downloads the judge kit. |
+| Method and path                          | Purpose                                                                                                                                                   |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                            | `status` (`ok`/`degraded`/`unavailable`), storage, `llm` (`available`/`model_missing`/`unavailable`), model.                                              |
+| `POST /workspaces`                       | Create an empty workspace. Returns its summary.                                                                                                           |
+| `POST /workspaces/demo`                  | Create a workspace preloaded with `demo/`.                                                                                                                |
+| `GET /workspaces/{id}`                   | Summary: `files` (name, sha256), `tables` (name, load snippet, rows, columns with dtypes, preview rows), `documents` (name, excerpt) and `findings`.      |
+| `POST /workspaces/{id}/files`            | Upload one file (multipart field `file`). Returns the updated summary. A file with the same name is replaced, which invalidates its old proofs by design. |
+| `DELETE /workspaces/{id}/files/{name}`   | Remove a file.                                                                                                                                            |
+| `POST /workspaces/{id}/ask`              | Body `{"question": "…"}` (3–1000 characters). Streams `application/x-ndjson` events (below).                                                              |
+| `GET /workspaces/{id}/runs`              | Every run record, newest first.                                                                                                                           |
+| `POST /workspaces/{id}/runs/{run}/rerun` | Re-executes every stored proof script and returns `claimed`, `reproduced` and `match` for each.                                                           |
+| `POST /workspaces/{id}/runs/{run}/adopt` | Body `{"index": n}`. Resolves an ambiguous run by choosing interpretation `n`.                                                                            |
+| `GET /workspaces/{id}/bundle.zip`        | Downloads the judge kit.                                                                                                                                  |
 
 **Stream events from `/ask`**, one JSON object per line:
 
-| `type` | Fields | Meaning |
-|---|---|---|
-| `scan` | `findings[]` | The trap scan result. |
-| `premises` | `premises[]` (each with `ok`, `detail`), `decision` | The Premise Audit result. |
-| `plan` | `attempt`, `status: "thinking"` | A planning attempt started. |
-| `plan` | `attempt`, `status: "checked"`, `interpretations[]`, `traps_handled[]`, `problems[]` | A plan was checked. An empty `problems` means it was accepted. |
-| `exec` | `index`, `label`, `attempt`, `ok`, `error` | One proof script execution. |
-| `result` | `run` | The final run record (see [section 10](#10-storage-layout-and-the-run-record)). |
-| `error` | `error_code`, `message` | For example, Ollama is unreachable. |
+| `type`     | Fields                                                                               | Meaning                                                                         |
+| ---------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `scan`     | `findings[]`                                                                         | The trap scan result.                                                           |
+| `premises` | `premises[]` (each with `ok`, `detail`), `decision`                                  | The Premise Audit result.                                                       |
+| `plan`     | `attempt`, `status: "thinking"`                                                      | A planning attempt started.                                                     |
+| `plan`     | `attempt`, `status: "checked"`, `interpretations[]`, `traps_handled[]`, `problems[]` | A plan was checked. An empty `problems` means it was accepted.                  |
+| `exec`     | `index`, `label`, `attempt`, `ok`, `error`                                           | One proof script execution.                                                     |
+| `result`   | `run`                                                                                | The final run record (see [section 10](#10-storage-layout-and-the-run-record)). |
+| `error`    | `error_code`, `message`                                                              | For example, Ollama is unreachable.                                             |
 
 ---
 
@@ -555,19 +561,19 @@ data/workspaces/<32-hex id>/
 
 A run record contains:
 
-| Field | Content |
-|---|---|
-| `id`, `question`, `created_at`, `model` | Identity and provenance. |
-| `hashes` | The SHA-256 of every input file when the question was asked. |
-| `premises[]` | `{kind, column, value, ok, detail}`. |
-| `traps[]` | The findings this answer touched, plus `how` the code handled each one. |
-| `interpretations[]` | `{index, label, assumptions, script, ok, value, display, deterministic, error}`. |
-| `status` | `answered`, `ambiguous` or `refused`. |
-| `answer`, `display`, `unit`, `explanation` | The answer and its text. The text is filled only from script output. |
-| `clarifying_question` | Set for ambiguous runs. |
-| `refusal` | `{code, reason, needed}`, for refused runs. |
-| `strength` | `{level, checks[{level, name, passed, detail}]}`. |
-| `adopted` | The interpretation the user chose for an ambiguous run, if any. |
+| Field                                      | Content                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| `id`, `question`, `created_at`, `model`    | Identity and provenance.                                                         |
+| `hashes`                                   | The SHA-256 of every input file when the question was asked.                     |
+| `premises[]`                               | `{kind, column, value, ok, detail}`.                                             |
+| `traps[]`                                  | The findings this answer touched, plus `how` the code handled each one.          |
+| `interpretations[]`                        | `{index, label, assumptions, script, ok, value, display, deterministic, error}`. |
+| `status`                                   | `answered`, `ambiguous` or `refused`.                                            |
+| `answer`, `display`, `unit`, `explanation` | The answer and its text. The text is filled only from script output.             |
+| `clarifying_question`                      | Set for ambiguous runs.                                                          |
+| `refusal`                                  | `{code, reason, needed}`, for refused runs.                                      |
+| `strength`                                 | `{level, checks[{level, name, passed, detail}]}`.                                |
+| `adopted`                                  | The interpretation the user chose for an ambiguous run, if any.                  |
 
 ---
 
@@ -576,17 +582,17 @@ A run record contains:
 React 19, TypeScript (strict), Vite, Tailwind 4 (used only for its CSS reset), Zustand,
 TanStack Query and lucide-react icons.
 
-| File | Role |
-|---|---|
-| `api/client.ts` | Every type (`Run`, `Interpretation`, `Finding`, `AgentEvent`, …) and every call. `ask()` is an **async generator**: it reads the response body stream, splits it on newlines and yields typed events. `API_BASE` defaults to `http://127.0.0.1:8000`. |
-| `store/workspaceStore.ts` | The current `workspaceId` (kept in localStorage, wrapped in try/catch) and its `summary`. `forget()` starts over. |
-| `components/layout/AppShell.tsx` | Skip link, a top bar with the brand, numbered step navigation and a "N files, N traps" status, the routed page, and the footer. It reloads the workspace summary on mount and forgets the workspace if it no longer exists. |
-| `pages/WorkspacePage.tsx` | Upload (multiple files, one at a time), demo loading, the trap list (`FindingList`), files with hashes and delete, table previews and documents. |
-| `pages/AskPage.tsx` | The question box (Enter submits), demo questions, a live progress log (`describe()` turns each event into a sentence), and the resulting certificate. Uses an AbortController to cancel a previous question. |
-| `pages/EvidencePage.tsx` | The proof-kit download and every run (`useQuery`). Adopting a reading refreshes the list. |
-| `components/proof/RunView.tsx` | **The answer certificate.** `ProofSeal` is an SVG ring of three arcs (one per proof level) inked in the verdict colour; the arcs draw in once and respect `prefers-reduced-motion`. `Checks` lists the proof-level checks. Also: the Interpretation Matrix with "Use this reading", the refusal section, `Context` (traps handled, de-duplicated premises), `ProofScript` (copy) and `Rerun`. |
-| `components/ui/*` | `Button`, `PageHeader`, `StatusMessage` (`role=status` or `alert`), `SkipLink`, `RootErrorBoundary`. |
-| `styles/index.css` | One stylesheet. Tokens on `:root`: ledger paper `#F2F4EF`, ink `#17231E`, verified `#2E6A4E`, ambiguous `#94580A`, refused `#AD2A20`. Each certificate sets `--tone` from its status, and that colours its border, verdict and seal. Fonts are Schibsted Grotesk, plus JetBrains Mono for code and hashes. Responsive down to 320 px, with visible focus and reduced motion respected. |
+| File                             | Role                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/client.ts`                  | Every type (`Run`, `Interpretation`, `Finding`, `AgentEvent`, …) and every call. `ask()` is an **async generator**: it reads the response body stream, splits it on newlines and yields typed events. `API_BASE` defaults to `http://127.0.0.1:8000`.                                                                                                                                         |
+| `store/workspaceStore.ts`        | The current `workspaceId` (kept in localStorage, wrapped in try/catch) and its `summary`. `forget()` starts over.                                                                                                                                                                                                                                                                             |
+| `components/layout/AppShell.tsx` | Skip link, a top bar with the brand, numbered step navigation and a "N files, N traps" status, the routed page, and the footer. It reloads the workspace summary on mount and forgets the workspace if it no longer exists.                                                                                                                                                                   |
+| `pages/WorkspacePage.tsx`        | Upload (multiple files, one at a time), demo loading, the trap list (`FindingList`), files with hashes and delete, table previews and documents.                                                                                                                                                                                                                                              |
+| `pages/AskPage.tsx`              | The question box (Enter submits), demo questions, a live progress log (`describe()` turns each event into a sentence), and the resulting certificate. Uses an AbortController to cancel a previous question.                                                                                                                                                                                  |
+| `pages/EvidencePage.tsx`         | The proof-kit download and every run (`useQuery`). Adopting a reading refreshes the list.                                                                                                                                                                                                                                                                                                     |
+| `components/proof/RunView.tsx`   | **The answer certificate.** `ProofSeal` is an SVG ring of three arcs (one per proof level) inked in the verdict colour; the arcs draw in once and respect `prefers-reduced-motion`. `Checks` lists the proof-level checks. Also: the Interpretation Matrix with "Use this reading", the refusal section, `Context` (traps handled, de-duplicated premises), `ProofScript` (copy) and `Rerun`. |
+| `components/ui/*`                | `Button`, `PageHeader`, `StatusMessage` (`role=status` or `alert`), `SkipLink`, `RootErrorBoundary`.                                                                                                                                                                                                                                                                                          |
+| `styles/index.css`               | One stylesheet. Tokens on `:root`: ledger paper `#F2F4EF`, ink `#17231E`, verified `#2E6A4E`, ambiguous `#94580A`, refused `#AD2A20`. Each certificate sets `--tone` from its status, and that colours its border, verdict and seal. Fonts are Schibsted Grotesk, plus JetBrains Mono for code and hashes. Responsive down to 320 px, with visible focus and reduced motion respected.        |
 
 ---
 
@@ -658,28 +664,28 @@ source rows, so the answer key can't drift from the data:
 python demo/build_demo.py
 ```
 
-| File | Planted traps |
-|---|---|
-| `orders.csv` | 34 rows: 4 re-imported duplicates, `$` and `€` amounts in one column, `""`/`N/A` missing amounts, ISO dates mixed with ambiguous `02/03/2024`-style dates. |
-| `customers.xlsx` | The `Customers` sheet contradicts the orders' `region` for 3 customers. There is also a `Targets` sheet. |
-| `policy.md` | 1 EUR = 1.10 USD; the fiscal year starts 1 April; the customer master is authoritative for region; orders without an amount are excluded from revenue; one order ID is one sale. |
+| File             | Planted traps                                                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders.csv`     | 34 rows: 4 re-imported duplicates, `$` and `€` amounts in one column, `""`/`N/A` missing amounts, ISO dates mixed with ambiguous `02/03/2024`-style dates.                       |
+| `customers.xlsx` | The `Customers` sheet contradicts the orders' `region` for 3 customers. There is also a `Targets` sheet.                                                                         |
+| `policy.md`      | 1 EUR = 1.10 USD; the fiscal year starts 1 April; the customer master is authoritative for region; orders without an amount are excluded from revenue; one order ID is one sale. |
 
 `demo/questions.json` holds 11 reference questions. Numeric values in this table are computed by
 `demo/build_demo.py`, rather than copied from model output:
 
-| # | Question | Expected |
-|---|---|---|
-| 1 | How many unique orders are there? | 30 |
-| 2 | What is the total revenue in USD? | 3,638.00 |
-| 3 | What was the total revenue in USD in March 2024? | ambiguous (DMY gives 668.50, MDY gives 280.00) |
-| 4 | Which region generated the most revenue in USD? | West (by the authoritative region) |
-| 5 | How many orders have no recorded amount? | 3 |
-| 6 | What is the average order amount in EUR for orders paid in EUR? | 122.50 |
-| 7 | How many Widgets were sold in total? | 42 |
-| 8 | What was the revenue on February 30, 2024? | refuse (not a real date) |
-| 9 | What is our total profit margin? | refuse (no cost data) |
-| 10 | How much revenue did we make in 2023? | refuse (no data in that period) |
-| 11 | What will revenue be next quarter? | refuse (forecast) |
+| #   | Question                                                        | Expected                                       |
+| --- | --------------------------------------------------------------- | ---------------------------------------------- |
+| 1   | How many unique orders are there?                               | 30                                             |
+| 2   | What is the total revenue in USD?                               | 3,638.00                                       |
+| 3   | What was the total revenue in USD in March 2024?                | ambiguous (DMY gives 668.50, MDY gives 280.00) |
+| 4   | Which region generated the most revenue in USD?                 | West (by the authoritative region)             |
+| 5   | How many orders have no recorded amount?                        | 3                                              |
+| 6   | What is the average order amount in EUR for orders paid in EUR? | 122.50                                         |
+| 7   | How many Widgets were sold in total?                            | 42                                             |
+| 8   | What was the revenue on February 30, 2024?                      | refuse (not a real date)                       |
+| 9   | What is our total profit margin?                                | refuse (no cost data)                          |
+| 10  | How much revenue did we make in 2023?                           | refuse (no data in that period)                |
+| 11  | What will revenue be next quarter?                              | refuse (forecast)                              |
 
 ```powershell
 cd backend
@@ -704,20 +710,29 @@ seed at 7, but runtime and model-version differences can still change a plan.
 
 Backend settings come from `APP_*` environment variables or `backend/.env`:
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `APP_ENV` | `development` | Reported by `/health`. |
-| `APP_HOST`, `APP_PORT` | `127.0.0.1`, `8000` | Bind address. |
-| `APP_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL`. |
-| `APP_DATA_DIR` | `data` | Where workspaces are stored. |
-| `APP_MAX_UPLOAD_BYTES` | `20971520` (20 MB) | Per-file upload limit. |
-| `APP_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | CORS origins (JSON list; no wildcard). |
-| `APP_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama server. |
-| `APP_OLLAMA_MODEL` | `qwen3:8b` | Any Ollama chat model that supports JSON-schema output. |
-| `APP_LLM_TIMEOUT_SECONDS` | `300` | Per LLM call. |
-| `APP_SCRIPT_TIMEOUT_SECONDS` | `20` | Per proof script execution. |
+| Variable                     | Default                     | Meaning                                                                                                                                              |
+| ---------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`                    | `development`               | Reported by `/health`.                                                                                                                               |
+| `APP_HOST`, `APP_PORT`       | `127.0.0.1`, `8000`         | Reserved launch settings. The checked-in Uvicorn and Docker commands currently pass host and port explicitly, so change those command flags as well. |
+| `APP_LOG_LEVEL`              | `INFO`                      | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL`.                                                                                                   |
+| `APP_DATA_DIR`               | `data`                      | Where workspaces are stored.                                                                                                                         |
+| `APP_MAX_UPLOAD_BYTES`       | `20971520` (20 MB)          | Per-file upload limit.                                                                                                                               |
+| `APP_ALLOWED_ORIGINS`        | `["http://localhost:5173"]` | CORS origins (JSON list; no wildcard).                                                                                                               |
+| `APP_OLLAMA_URL`             | `http://127.0.0.1:11434`    | Ollama server.                                                                                                                                       |
+| `APP_OLLAMA_MODEL`           | `qwen3:8b`                  | Any Ollama chat model that supports JSON-schema output.                                                                                              |
+| `APP_LLM_TIMEOUT_SECONDS`    | `300`                       | Per LLM call.                                                                                                                                        |
+| `APP_SCRIPT_TIMEOUT_SECONDS` | `20`                        | Per proof script execution.                                                                                                                          |
 
-Frontend: `VITE_API_BASE_URL` overrides the API URL (default `http://127.0.0.1:8000`).
+Frontend: `VITE_API_BASE_URL` overrides the API URL (default `http://127.0.0.1:8000`). For
+example, create `frontend/.env.local` before running or building Vite:
+
+```dotenv
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+When the frontend origin changes, add the exact origin to `APP_ALLOWED_ORIGINS` as a JSON array,
+for example `["http://localhost:4173"]`. Wildcard origins are rejected by configuration
+validation.
 
 ---
 
@@ -738,6 +753,7 @@ LLM-written code is untrusted. These defences are layered:
    - string literals that look like URLs, absolute paths, `~` or `../` traversal.
 
    The gate runs on the agent's code and again on the full script.
+
 2. **Process isolation.** Scripts run with `python -I` (isolated mode), with only `PYTHONIOENCODING`
    and `SYSTEMROOT` in the environment, in a fresh **temporary copy** of the workspace, so the
    originals can't be altered. There is a 20 s timeout.
@@ -753,8 +769,9 @@ LLM-written code is untrusted. These defences are layered:
    - CORS is restricted to configured origins.
    - Pydantic validates request bodies.
    - Error responses never include stack traces.
-6. **Privacy.** The LLM is local Ollama, so schemas, sample values and documents never go to a cloud
-   service.
+6. **Privacy.** The default LLM endpoint is local Ollama. Schemas, sample values and documents are
+   sent to the configured `APP_OLLAMA_URL`, so operators must review the privacy implications
+   before changing it to a remote endpoint.
 
 ---
 
@@ -793,6 +810,7 @@ npm run build
   - the API endpoints.
 
   Ruff (E, F, I, B, UP, S, ASYNC; line length 100) and strict mypy also run.
+
 - **Frontend:** 7 Vitest tests across 2 files currently pass. Vitest and Testing Library cover
   routing, active navigation, legal pages, the not-found page, the skip link, keyboard access,
   proof-seal states and proof-source visualization. ESLint, Prettier and the strict TypeScript
@@ -803,17 +821,17 @@ npm run build
 
 Checked on 7 October 2026 with Python 3.12.6, Node.js 24.10.0 and npm 11.6.1:
 
-| Check | Result |
-|---|---|
-| Backend `ruff check .` | Passed |
-| Backend `ruff format --check .` | Passed (25 files) |
-| Backend strict `mypy app` | Passed (20 source files) |
-| Backend pytest | Passed (22 tests; one upstream Starlette deprecation warning) |
-| Frontend ESLint | Passed |
-| Frontend Vitest | Passed (7 tests in 2 files) |
-| Frontend production build | Passed (1,970 modules transformed) |
-| Frontend Prettier check | Does not currently pass; it reports style differences in 20 files |
-| Live Ollama evaluation | Not re-run for this documentation update because Ollama was installed but not running |
+| Check                           | Result                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| Backend `ruff check .`          | Passed                                                                                |
+| Backend `ruff format --check .` | Passed (25 files)                                                                     |
+| Backend strict `mypy app`       | Passed (20 source files)                                                              |
+| Backend pytest                  | Passed (22 tests; one upstream Starlette deprecation warning)                         |
+| Frontend ESLint                 | Passed                                                                                |
+| Frontend Vitest                 | Passed (7 tests in 2 files)                                                           |
+| Frontend production build       | Passed (1,970 modules transformed)                                                    |
+| Frontend Prettier check         | Does not currently pass; it reports style differences in 20 files                     |
+| Live Ollama evaluation          | Not re-run for this documentation update because Ollama was installed but not running |
 
 The formatting difference does not affect runtime behavior, but it should be resolved with
 `npm run format` and reviewed before treating the repository as fully green.
@@ -822,11 +840,11 @@ The formatting difference does not affect runtime behavior, but it should be res
 
 ## 17. Limits and upgrade paths
 
-| Limit | Upgrade path |
-|---|---|
-| The sandbox is an AST gate plus an isolated subprocess, not a container. | Run proof scripts in a network-less, read-only container before any shared deployment. |
-| There is no authentication. Anyone who knows a workspace ID can read it. | Add auth and per-user workspaces before exposing the API beyond localhost. |
-| An 8B local model takes 20–90 s per question, and accuracy varies between runs. | Use a larger model (`APP_OLLAMA_MODEL`), or run each plan twice and require agreement. |
-| Trap detection is heuristic. For example, a contradiction is only detected across a shared `*id` key. | Add more scanners (outliers, unit columns, fuzzy keys) as new data shapes appear. |
-| Documents are truncated to 6000 characters, and image-only PDFs yield no text. | Retrieval over document chunks, and OCR. |
-| The light theme only. | Add dark-mode tokens under `prefers-color-scheme`. |
+| Limit                                                                                                 | Upgrade path                                                                           |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| The sandbox is an AST gate plus an isolated subprocess, not a container.                              | Run proof scripts in a network-less, read-only container before any shared deployment. |
+| There is no authentication. Anyone who knows a workspace ID can read it.                              | Add auth and per-user workspaces before exposing the API beyond localhost.             |
+| An 8B local model takes 20–90 s per question, and accuracy varies between runs.                       | Use a larger model (`APP_OLLAMA_MODEL`), or run each plan twice and require agreement. |
+| Trap detection is heuristic. For example, a contradiction is only detected across a shared `*id` key. | Add more scanners (outliers, unit columns, fuzzy keys) as new data shapes appear.      |
+| Documents are truncated to 6000 characters, and image-only PDFs yield no text.                        | Retrieval over document chunks, and OCR.                                               |
+| The light theme only.                                                                                 | Add dark-mode tokens under `prefers-color-scheme`.                                     |
