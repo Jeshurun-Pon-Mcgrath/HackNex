@@ -6,33 +6,136 @@ import { Button } from '../ui/Button'
 const LEVEL_NAMES = ['No claim', 'Runs', 'Reproducible', 'Robust']
 const VERDICTS = { answered: 'Answered', ambiguous: 'Depends on a reading', refused: 'Refused' }
 
-// Three arcs, one per proof level, drawn clockwise from the top with small gaps.
+// A continuous proof-strength ring, filled clockwise from the top.
 const R = 42
-const ARC = (2 * Math.PI * R) / 3
-const GAP = 7
+const CIRCUMFERENCE = 2 * Math.PI * R
 
 export function ProofSeal({ run }: { run: Run }) {
   const { level } = run.strength
+  const state = level === 3 ? 'full' : level === 0 ? 'empty' : 'partial'
   return (
-    <figure className="seal" aria-label={`Proof strength L${level}: ${LEVEL_NAMES[level]}`}>
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        {[1, 2, 3].map((n) => (
-          <circle
-            key={n}
-            className={n <= level ? 'seal__arc seal__arc--on' : 'seal__arc'}
-            cx="50"
-            cy="50"
-            r={R}
-            strokeDasharray={`${ARC - GAP} ${2 * Math.PI * R}`}
-            transform={`rotate(${-90 + (n - 1) * 120 + (GAP / (2 * Math.PI * R)) * 180} 50 50)`}
-            style={{ animationDelay: `${n * 140}ms` }}
-          />
-        ))}
-        <text x="50" y="57" textAnchor="middle" className="seal__level">
-          L{level}
-        </text>
-      </svg>
-      <figcaption>{LEVEL_NAMES[level]}</figcaption>
+    <figure
+      className={`seal seal--${state} seal--level-${level}`}
+      aria-label={`Proof strength L${level}: ${LEVEL_NAMES[level]}`}
+    >
+      <div className="seal__stage">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id={`seal-metal-${run.id}`} x1="18" y1="12" x2="102" y2="108">
+              <stop offset="0" stopColor="#586d62" />
+              <stop offset="0.42" stopColor="#1c3026" />
+              <stop offset="1" stopColor="#07130e" />
+            </linearGradient>
+            <linearGradient id={`seal-tone-${run.id}`} x1="18" y1="12" x2="102" y2="108">
+              <stop offset="0" stopColor="var(--seal-light)" />
+              <stop offset="0.52" stopColor="var(--seal-color)" />
+              <stop offset="1" stopColor="var(--seal-dark)" />
+            </linearGradient>
+            <radialGradient id={`seal-face-${run.id}`} cx="36%" cy="27%" r="76%">
+              <stop offset="0" stopColor="#31453a" />
+              <stop offset="0.58" stopColor="#17271f" />
+              <stop offset="1" stopColor="#08140e" />
+            </radialGradient>
+            <filter id={`seal-shadow-${run.id}`} x="-35%" y="-35%" width="170%" height="185%">
+              <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#10251b" floodOpacity=".3" />
+            </filter>
+          </defs>
+          <g filter={`url(#seal-shadow-${run.id})`}>
+            <ellipse className="seal__base" cx="60" cy="66" rx="50" ry="48" />
+            <circle
+              className="seal__rim"
+              cx="60"
+              cy="58"
+              r="50"
+              stroke={`url(#seal-metal-${run.id})`}
+            />
+            <circle
+              className="seal__face"
+              cx="60"
+              cy="58"
+              r="43"
+              fill={`url(#seal-face-${run.id})`}
+            />
+            <circle className="seal__track" cx="60" cy="58" r={R} />
+            <circle
+              className="seal__progress"
+              cx="60"
+              cy="58"
+              r={R}
+              stroke={`url(#seal-tone-${run.id})`}
+              strokeDasharray={CIRCUMFERENCE}
+              transform="rotate(-90 60 58)"
+            />
+            <circle className="seal__hub" cx="60" cy="58" r="27" />
+            <path className="seal__shine" d="M31 39a35 35 0 0 1 47-12" />
+            <text x="60" y="65" textAnchor="middle" className="seal__level">
+              L{level}
+            </text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <span>Proof strength</span>
+        <strong>{LEVEL_NAMES[level]}</strong>
+        <small>{level} of 3 checks secured</small>
+      </figcaption>
+    </figure>
+  )
+}
+
+function getUsedSources(run: Run) {
+  const proofText = run.interpretations
+    .filter((interpretation) => interpretation.ok && interpretation.script)
+    .map((interpretation) => interpretation.script)
+    .join('\n')
+    .toLocaleLowerCase()
+
+  return Object.keys(run.hashes)
+    .map((name) => ({
+      name,
+      references: proofText.split(name.toLocaleLowerCase()).length - 1,
+    }))
+    .filter((source) => source.references > 0)
+}
+
+function DataUsageChart({ run }: { run: Run }) {
+  const sources = getUsedSources(run)
+  if (sources.length === 0) return null
+
+  const maximum = Math.max(...sources.map((source) => source.references))
+  return (
+    <figure className="data-viz" aria-labelledby={`data-viz-${run.id}`}>
+      <figcaption>
+        <span>
+          <strong id={`data-viz-${run.id}`}>Data used in this answer</strong>
+          <small>References found in the generated proof</small>
+        </span>
+        <span className="data-viz__count">
+          {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+        </span>
+      </figcaption>
+      <div className="data-viz__scene">
+        <div className="data-viz__floor" aria-hidden="true" />
+        <ul className="data-viz__bars">
+          {sources.map((source, index) => {
+            const height = 42 + (source.references / maximum) * 58
+            return (
+              <li key={source.name} className="data-bar">
+                <div className="data-bar__value">{source.references}×</div>
+                <div
+                  className="data-bar__column"
+                  style={{ height: `${height}%`, animationDelay: `${index * 100}ms` }}
+                  aria-hidden="true"
+                />
+                <strong title={source.name}>{source.name}</strong>
+                <span>
+                  {source.references} proof {source.references === 1 ? 'reference' : 'references'}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </figure>
   )
 }
@@ -256,6 +359,8 @@ export function RunView({
               </p>
             </section>
           )}
+
+          {run.status !== 'refused' && <DataUsageChart run={run} />}
         </div>
 
         <aside className="cert__proof" aria-label="How this was proven">

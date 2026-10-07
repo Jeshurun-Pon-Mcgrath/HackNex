@@ -9,7 +9,6 @@ export function Footer() {
         <Link to="/privacy">Privacy Policy</Link>
         <Link to="/terms">Terms and Conditions</Link>
       </nav>
-      <span>© {new Date().getFullYear()}</span>
     </footer>
   )
 }
