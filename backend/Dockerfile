@@ -5,11 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP_HOST=0.0.0.0 \
     APP_PORT=8000 \
     APP_DATA_DIR=/app/data \
-    APP_DATABASE_PATH=/app/data/prooflens.sqlite3
+    APP_OLLAMA_URL=http://host.docker.internal:11434
 
 WORKDIR /app
 RUN addgroup --system prooflens && adduser --system --ingroup prooflens prooflens
-COPY pyproject.toml README.md ./
+COPY pyproject.toml ./
 COPY app ./app
 RUN pip install --no-cache-dir . && mkdir -p /app/data && chown -R prooflens:prooflens /app/data
 USER prooflens

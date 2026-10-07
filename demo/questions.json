@@ -1,0 +1,52 @@
+[
+  {
+    "q": "How many unique orders are there?",
+    "expect": "answer",
+    "value": 30
+  },
+  {
+    "q": "What is the total revenue in USD?",
+    "expect": "answer",
+    "value": 3638.0
+  },
+  {
+    "q": "What was the total revenue in USD in March 2024?",
+    "expect": "ambiguous"
+  },
+  {
+    "q": "Which region generated the most revenue in USD?",
+    "expect": "answer",
+    "value": "West"
+  },
+  {
+    "q": "How many orders have no recorded amount?",
+    "expect": "answer",
+    "value": 3
+  },
+  {
+    "q": "What is the average order amount in EUR for orders paid in EUR?",
+    "expect": "answer",
+    "value": 122.5
+  },
+  {
+    "q": "How many Widgets were sold in total?",
+    "expect": "answer",
+    "value": 42
+  },
+  {
+    "q": "What was the revenue on February 30, 2024?",
+    "expect": "refuse"
+  },
+  {
+    "q": "What is our total profit margin?",
+    "expect": "refuse"
+  },
+  {
+    "q": "How much revenue did we make in 2023?",
+    "expect": "refuse"
+  },
+  {
+    "q": "What will revenue be next quarter?",
+    "expect": "refuse"
+  }
+]

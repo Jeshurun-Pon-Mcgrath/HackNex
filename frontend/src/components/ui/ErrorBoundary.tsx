@@ -20,7 +20,6 @@ export class RootErrorBoundary extends Component<Props, State> {
       return (
         <main className="error-page">
           <div>
-            <p className="page-header__eyebrow">Application error</p>
             <h1>Something went wrong</h1>
             <p>
               The application could not display this page. No technical details have been exposed.

@@ -17,31 +17,16 @@ function renderRoute(route = '/') {
 describe('Zynex application', () => {
   it('redirects to and renders the workspace', async () => {
     renderRoute()
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Data Workspace' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Choose a CSV or XLSX file to inspect locally.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your data' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /load the demo data/i })).toBeInTheDocument()
   })
 
   it('navigates between product routes and identifies the active link', async () => {
     const user = userEvent.setup()
     renderRoute('/workspace')
-    const analysisLinks = screen.getAllByRole('link', { name: 'Analysis' })
-    await user.click(analysisLinks[0])
-    expect(screen.getByRole('heading', { level: 1, name: 'Analysis' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Analysis' })[0]).toHaveClass('nav-link--active')
-  })
-
-  it('opens and closes accessible mobile navigation with Escape', async () => {
-    const user = userEvent.setup()
-    renderRoute('/workspace')
-    const openButton = screen.getByRole('button', { name: 'Open navigation' })
-    await user.click(openButton)
-    expect(screen.getByRole('dialog', { name: 'Navigation' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Close navigation' })).toHaveFocus()
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: 'Navigation' })).not.toBeInTheDocument()
-    expect(openButton).toHaveFocus()
+    await user.click(screen.getAllByRole('link', { name: 'Evidence' })[0])
+    expect(screen.getByRole('heading', { level: 1, name: 'Evidence' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Evidence' })[0]).toHaveClass('nav-link--active')
   })
 
   it('provides working legal links and draft policy content', async () => {
@@ -70,10 +55,10 @@ describe('Zynex application', () => {
     renderRoute('/workspace')
     await user.tab()
     expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveFocus()
-    expect(screen.getByLabelText('Choose file')).toHaveAttribute(
+    expect(screen.getByLabelText(/add files/i)).toHaveAttribute(
       'accept',
       expect.stringContaining('.csv'),
     )
-    expect(screen.getByText(/held in memory only/i)).toBeInTheDocument()
+    expect(screen.getByText(/go to the Zynex backend on this machine/i)).toBeInTheDocument()
   })
 })

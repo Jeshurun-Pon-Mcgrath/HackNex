@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "prooflens-backend"
-version = "0.4.0"
-description = "ProofLens Phase 4 secure dataset ingestion and analysis planning API"
+version = "0.5.0"
+description = "ProofLens: proof-carrying data analyst agent"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi==0.115.12",
@@ -13,22 +13,22 @@ dependencies = [
   "pydantic==2.11.4",
   "pydantic-settings==2.9.1",
   "python-multipart==0.0.20",
-  "polars==1.29.0",
   "openpyxl==3.1.5",
+  "pandas>=2.2,<4",
+  "numpy>=2",
+  "pypdf>=5",
+  "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "httpx==0.28.1",
   "pytest==8.3.5",
   "pytest-asyncio==0.26.0",
   "ruff==0.11.9",
   "mypy==1.15.0",
   "types-openpyxl==3.1.5.20250516",
+  "pandas-stubs",
 ]
-
-[project.scripts]
-prooflens-cleanup = "app.cleanup:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -41,6 +41,10 @@ line-length = 100
 select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
 ignore = ["S101"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S603"]
+"app/agent/pipeline.py" = ["E501"]  # LLM prompt prose
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -50,3 +54,4 @@ plugins = ["pydantic.mypy"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+addopts = "--basetemp=.pytest_tmp"

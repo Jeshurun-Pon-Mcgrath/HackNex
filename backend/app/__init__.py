@@ -1,3 +1,3 @@
-"""ProofLens Phase 4 backend."""
+"""ProofLens backend: proof-carrying data analyst."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

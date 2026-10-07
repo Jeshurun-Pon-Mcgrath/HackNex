@@ -13,10 +13,12 @@ class Settings(BaseSettings):
     port: int = Field(8000, ge=1, le=65535)
     log_level: str = "INFO"
     data_dir: Path = Path("data")
-    database_path: Path = Path("data/prooflens.sqlite3")
     max_upload_bytes: int = Field(20 * 1024 * 1024, ge=1)
     allowed_origins: list[str] = ["http://localhost:5173"]
-    dataset_ttl_hours: int = Field(24, ge=1)
+    ollama_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen3:8b"
+    llm_timeout_seconds: float = Field(300, gt=0)
+    script_timeout_seconds: float = Field(20, gt=0)
 
     @field_validator("log_level")
     @classmethod
@@ -38,13 +40,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def safe_paths(self) -> "Settings":
         data = self.data_dir.expanduser().resolve()
-        database = self.database_path.expanduser().resolve()
         if data == Path(data.anchor):
             raise ValueError("data directory cannot be a filesystem root")
-        if database == data or database.suffix == "":
-            raise ValueError("database path must name a file")
         self.data_dir = data
-        self.database_path = database
         return self
 
 
