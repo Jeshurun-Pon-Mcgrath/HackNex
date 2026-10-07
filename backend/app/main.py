@@ -11,15 +11,10 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
 from app import __version__
-from app.analysis.service import AnalysisService
-from app.api.routes import analysis, datasets, health
+from app.api.routes import health, workspaces
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError, ErrorResponse, app_error_handler, unexpected_error_handler
 from app.core.logging import configure_logging, log_event
-from app.datasets.service import DatasetService
-from app.db.connection import Database
-from app.db.migrations import migrate
-from app.db.repositories import DatasetRepository
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -34,25 +29,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             os.close(descriptor)
         finally:
             probe.unlink(missing_ok=True)
-        database = Database(configuration.database_path)
-        database.open()
-        migrate(database.require())
-        repository = DatasetRepository(database.require())
-        dataset_manager = DatasetService(configuration, repository)
+        (configuration.data_dir / "workspaces").mkdir(exist_ok=True)
         app.state.settings = configuration
-        app.state.database = database
-        app.state.dataset_service = dataset_manager
-        app.state.analysis_service = AnalysisService(dataset_manager)
         yield
-        database.close()
 
     configure_logging(configuration.log_level)
     app = FastAPI(
         title="ProofLens API",
         version=__version__,
         description=(
-            "Phase 4 dataset ingestion, profiling, and analysis contract validation. "
-            "Analytical execution is not implemented."
+            "Proof-carrying data analyst: every number ships with a re-runnable, "
+            "hash-pinned proof script, or a refusal certificate."
         ),
         lifespan=lifespan,
         responses={422: {"model": ErrorResponse}},
@@ -71,7 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> Response:
         request_id = request.headers.get("x-request-id", str(uuid4()))[:128]
         request.state.request_id = request_id
-        if request.url.path == "/api/v1/datasets" and request.method == "POST":
+        if request.url.path.endswith("/files") and request.method == "POST":
             content_length = request.headers.get("content-length")
             if (
                 content_length
@@ -122,8 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return unexpected_error_handler(request, exc)
 
     app.include_router(health.router, prefix="/api/v1")
-    app.include_router(datasets.router, prefix="/api/v1")
-    app.include_router(analysis.router, prefix="/api/v1")
+    app.include_router(workspaces.router, prefix="/api/v1")
     return app
 
 

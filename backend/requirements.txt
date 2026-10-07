@@ -1,0 +1,13 @@
+# ProofLens backend runtime dependencies (Python 3.12), pinned to the tested versions.
+#   pip install -r requirements.txt
+# Dev tools (pytest, ruff, mypy): pip install -e ".[dev]"
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.4
+pydantic-settings==2.9.1
+python-multipart==0.0.20
+openpyxl==3.1.5
+pandas==3.0.6
+numpy==2.5.3
+pypdf==6.19.0
+httpx==0.28.1

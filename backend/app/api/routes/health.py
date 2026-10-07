@@ -2,6 +2,7 @@ import os
 from typing import Literal
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel
 
@@ -11,34 +12,40 @@ router = APIRouter(tags=["health"])
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok", "unavailable"]
+    status: Literal["ok", "degraded", "unavailable"]
     application_version: str
     api_version: str
     environment: str
-    database: Literal["available", "unavailable"]
-    dataset_storage: Literal["available", "unavailable"]
+    storage: Literal["available", "unavailable"]
+    llm: Literal["available", "model_missing", "unavailable"]
+    model: str
 
 
 @router.get("/health", response_model=HealthResponse)
 def health(request: Request, response: Response) -> HealthResponse:
-    database_ok = request.app.state.database.check()
+    settings = request.app.state.settings
     try:
-        data_dir = request.app.state.settings.data_dir
-        probe = data_dir / f".health-{uuid4().hex}"
-        descriptor = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        os.close(descriptor)
+        probe = settings.data_dir / f".health-{uuid4().hex}"
+        os.close(os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
         probe.unlink()
         storage_ok = True
     except OSError:
         storage_ok = False
-    healthy = database_ok and storage_ok
-    if not healthy:
+    llm: Literal["available", "model_missing", "unavailable"]
+    try:
+        tags = httpx.get(f"{settings.ollama_url.rstrip('/')}/api/tags", timeout=3).json()
+        names = {m.get("name") for m in tags.get("models", [])}
+        llm = "available" if settings.ollama_model in names else "model_missing"
+    except (httpx.HTTPError, ValueError):
+        llm = "unavailable"
+    if not storage_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return HealthResponse(
-        status="ok" if healthy else "unavailable",
+        status="unavailable" if not storage_ok else "ok" if llm == "available" else "degraded",
         application_version=__version__,
         api_version="v1",
-        environment=request.app.state.settings.env,
-        database="available" if database_ok else "unavailable",
-        dataset_storage="available" if storage_ok else "unavailable",
+        environment=settings.env,
+        storage="available" if storage_ok else "unavailable",
+        llm=llm,
+        model=settings.ollama_model,
     )
