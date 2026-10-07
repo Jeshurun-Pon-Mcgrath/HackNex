@@ -1,15 +1,16 @@
-# ProofLens: a proof-carrying data analyst
+# Zynex: a proof-carrying data analyst
 
 **HackNex 2026 · HNX26PS108 · Agentic GenAI · Team Zynex**
 
-ProofLens answers questions about messy, multi-table business data, such as CSV files, Excel
+Zynex answers questions about messy, multi-table business data, such as CSV files, Excel
 workbooks and policy documents. Its rule is simple: **every number it shows comes from a standalone
 Python script that anyone can re-run to get the same number.** When a question can't be answered
-reliably, ProofLens does not guess. It issues a **refusal certificate** that says why, and what data
+reliably, Zynex does not guess. It issues a **refusal certificate** that says why, and what data
 would make the question answerable.
 
-The web app is branded **Zynex**, the team name. ProofLens is the name of the analysis engine and
-API.
+**Zynex is the product and project name.** Some internal package names, storage keys, generated
+proof markers and download filenames still contain the legacy `prooflens` identifier. They are
+documented where they affect commands or file formats, but they are not a second product.
 
 ---
 
@@ -45,7 +46,7 @@ under these scoring rules:
 - the data contains traps: `$`/`€` mixed in one column, ambiguous dates, duplicate rows, tables
   that contradict each other, missing data, questions with no valid answer, and trick questions.
 
-ProofLens treats the language model as a **planner and code writer only**. The model never decides
+Zynex treats the language model as a **planner and code writer only**. The model never decides
 what number the user sees. Every number comes from executing code, and every safety decision is
 made by deterministic Python:
 
@@ -59,35 +60,145 @@ made by deterministic Python:
 | **Proof Strength L0–L3** | An evidence ladder instead of a model "confidence": L1 the script runs, L2 a fresh-process re-run gives identical output with inputs pinned by SHA-256, L3 every interpretation agrees. | trust signal |
 | **Judge kit** | A zip of the data, every proof script, `claims.json` and a stdlib-only `verify_all.py`. One command re-checks every claim. | "can someone else run it?" |
 
+### Technologies, libraries and model
+
+The versions below come from `backend/pyproject.toml`, `backend/requirements.txt` and
+`frontend/package-lock.json`. The lockfiles and pinned runtime requirements are the source of truth.
+
+| Layer | Technology | Version or constraint | Use |
+|---|---|---|---|
+| Local model runtime | Ollama | External prerequisite | Runs the language model locally through `/api/chat`; no hosted AI API is required. |
+| Default model | Qwen 3 8B | `qwen3:8b` | Extracts premises, plans pandas analysis code and repairs failed code. It does not directly supply displayed numeric answers. |
+| Backend language | Python | `>=3.12,<3.13` | API, deterministic checks, proof generation and execution. |
+| API | FastAPI / Uvicorn | `0.115.12` / `0.34.2` | REST API, NDJSON streaming, validation and serving. |
+| Schemas and settings | Pydantic / pydantic-settings | `2.11.4` / `2.9.1` | Request models, response models and validated `APP_*` configuration. |
+| Data analysis | pandas / NumPy | `3.0.6` / `2.5.3` in `requirements.txt` | Table loading, deterministic transformations and generated proof execution. |
+| File support | openpyxl / pypdf / python-multipart | `3.1.5` / `6.19.0` / `0.0.20` | XLSX parsing, PDF text extraction and uploads. |
+| Model HTTP client | HTTPX | `0.28.1` | Calls local Ollama and checks model health. |
+| Frontend | React / React DOM | `19.3.0` | Browser UI. |
+| Frontend language/build | TypeScript / Vite | `6.0.3` / `8.3.3` | Strict type checking, development server and production bundle. |
+| Navigation/state | React Router / Zustand / TanStack Query | `7.18.4` / `5.0.15` / `5.104.1` | Routes, remembered workspace state and server-state queries. |
+| Styling/icons | Tailwind CSS / Lucide React | `4.3.3` / `1.52.0` | CSS reset/build integration and interface icons. The visual system itself is custom CSS. |
+| Backend quality | pytest / Ruff / mypy | `8.3.5` / `0.11.9` / `1.15.0` | Tests, lint/format checks and strict type checking. |
+| Frontend quality | Vitest / Testing Library / ESLint / Prettier | See `frontend/package.json` | UI tests, linting and formatting. |
+
+Ollama receives schemas, sample values, document excerpts, the question and deterministic scan
+findings. The default model call uses JSON-schema output, `temperature: 0`, `seed: 7`,
+`think: false` and a `12288` token context. Seeded generation improves repeatability but does not
+make model output perfectly deterministic; the proof scripts and deterministic checks are the
+source of trust. You may select another Ollama chat model with `APP_OLLAMA_MODEL`, provided it
+supports structured JSON-schema output.
+
 ---
 
 ## 2. Quick start
 
-**Requirements:** Python 3.12, Node.js 20+, and [Ollama](https://ollama.com) with a local model.
-The default `qwen3:8b` fits in 8 GB of VRAM; set `APP_OLLAMA_MODEL` to use another model.
+### Prerequisites
+
+- Python 3.12.x. The backend explicitly requires `>=3.12,<3.13`.
+- Node.js 20 or newer and npm. Node 24.10.0 and npm 11.6.1 were used for the latest local check.
+- [Ollama](https://ollama.com) with the configured model downloaded. The default is `qwen3:8b`.
+- Enough memory for the selected model. Requirements vary by model and quantization.
+
+Confirm the tools are available:
+
+```text
+python --version
+node --version
+npm --version
+ollama --version
+```
+
+### Windows PowerShell
 
 ```powershell
 ollama pull qwen3:8b
+# Start `ollama serve` separately if Ollama is not already running as a service.
 
 # Backend (terminal 1)
 cd backend
 py -3.12 -m venv .venv
-.\.venv\Scripts\python -m pip install -r requirements.txt   # runtime only; or -e ".[dev]" for tests and linters
+.\.venv\Scripts\python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 .\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-# Frontend (terminal 2)
+# Frontend (terminal 2, from the repository root)
 cd frontend
-npm install
+npm ci
 npm run dev          # http://localhost:5173
 ```
+
+### macOS or Linux
+
+```bash
+ollama pull qwen3:8b
+# Start `ollama serve` separately if Ollama is not already running as a service.
+
+# Backend (terminal 1)
+cd backend
+python3.12 -m venv .venv
+./.venv/bin/python -m pip install -r requirements.txt
+cp .env.example .env
+./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Frontend (terminal 2, from the repository root)
+cd frontend
+npm ci
+npm run dev
+```
+
+Run Uvicorn from `backend/` because the backend reads `.env` relative to its working directory.
+The frontend API URL defaults to `http://127.0.0.1:8000`; set `VITE_API_BASE_URL` before
+starting or building Vite to override it.
 
 - Interactive API docs (Swagger) are at `http://127.0.0.1:8000/docs`.
 - `GET /api/v1/health` reports whether storage is writable and whether Ollama has the configured
   model.
+- The frontend is normally at `http://localhost:5173`.
 
-**Docker (backend only):** `backend/Dockerfile` builds a non-root image. It points at Ollama on the
-host through `APP_OLLAMA_URL=http://host.docker.internal:11434`.
+Verify the backend before opening the UI:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+```
+
+or:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+```
+
+The response is healthy when `storage` and `llm` are both `available`. A `degraded` status
+with `llm: unavailable` means the API is running but Ollama is not reachable. `model_missing`
+means Ollama is reachable but the configured model has not been pulled.
+
+### Development dependencies
+
+The quick start installs pinned backend runtime dependencies. Contributors who need pytest, Ruff
+and mypy should install the package with its development extra:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+```
+
+On macOS or Linux, replace `.\.venv\Scripts\python` with `./.venv/bin/python`.
+
+### Docker backend
+
+The Dockerfile builds the backend only. Run the frontend separately with `npm run dev`, or deploy
+the contents of `frontend/dist` after `npm run build`.
+
+```bash
+docker build -t zynex-backend backend
+docker run --rm --name zynex-backend -p 8000:8000 \
+  -v zynex-data:/app/data zynex-backend
+```
+
+The image runs as a non-root user and uses `http://host.docker.internal:11434` for Ollama. On Linux
+you may also need `--add-host=host.docker.internal:host-gateway`. The current image does not copy
+the repository-level `demo/` directory, so **Load the demo data** is unavailable in the container;
+upload the demo files manually or run the backend from source for the complete demonstration.
 
 ---
 
@@ -506,8 +617,46 @@ the chosen reading is included.
 
 ## 13. Demo data and evaluation
 
+`demo/` is the reproducibility fixture used by the UI, tests and evaluator. It is committed so
+the demonstration can be run without preparing private data.
+
+### Reproduce the browser demonstration
+
+1. Pull and start the configured Ollama model.
+2. Start the backend and frontend with the commands in [Quick start](#2-quick-start).
+3. Check `http://127.0.0.1:8000/api/v1/health`. Continue when `storage` and `llm` are
+   `available`.
+4. Open `http://localhost:5173` and choose **Load the demo data**.
+5. On **Data**, verify that `orders.csv`, `customers.xlsx` and `policy.md` are present. Zynex
+   should identify all five planted trap categories: duplicate rows, missing values, mixed
+   currency, ambiguous dates and a cross-table region contradiction.
+6. Go to **Ask** and ask one or more questions from the table below. Progress should stream through
+   scan, premise, plan and proof-execution stages.
+7. For an answered question, expand the proof, use **Re-run proofs**, and confirm the reproduced
+   value matches the claim.
+8. For the March 2024 question, verify that Zynex either shows the competing DMY/MDY readings or
+   gives a reasoned refusal. For impossible dates, missing fields, absent periods and forecasts,
+   verify that it refuses instead of inventing a value.
+9. Go to **Evidence**, download `prooflens-proof-kit.zip`, extract it, and run:
+
+```bash
+python -m pip install pandas openpyxl
+python verify_all.py
+```
+
+The verifier must print `PASS` for each included numeric claim and exit with status 0. The
+`PROOFLENS_RESULT=` marker and ZIP filename are legacy wire-format identifiers retained by the
+implementation; the product name is Zynex.
+
+### Regenerate the fixture and answer key
+
 `python demo/build_demo.py` regenerates the demo and computes the expected answers from the same
 source rows, so the answer key can't drift from the data:
+
+```bash
+# Run from the repository root. This overwrites the four generated files in demo/.
+python demo/build_demo.py
+```
 
 | File | Planted traps |
 |---|---|
@@ -515,7 +664,8 @@ source rows, so the answer key can't drift from the data:
 | `customers.xlsx` | The `Customers` sheet contradicts the orders' `region` for 3 customers. There is also a `Targets` sheet. |
 | `policy.md` | 1 EUR = 1.10 USD; the fiscal year starts 1 April; the customer master is authoritative for region; orders without an amount are excluded from revenue; one order ID is one sale. |
 
-`demo/questions.json` holds 11 questions:
+`demo/questions.json` holds 11 reference questions. Numeric values in this table are computed by
+`demo/build_demo.py`, rather than copied from model output:
 
 | # | Question | Expected |
 |---|---|---|
@@ -542,10 +692,11 @@ cd backend
 also re-runs every proof in a fresh process and reports the re-run success rate. For the ambiguous
 question, either the matrix or a reasoned refusal counts as correct.
 
-**Latest result with `qwen3:8b`:** 11/11, and 12/12 proofs reproduced. Earlier development runs
-scored 8–10/11, so expect some run-to-run variation from a small local model. Each deterministic
-check in [section 6](#6-how-a-question-is-answered-step-by-step) (step ③) was added after an
-eval run showed a specific failure.
+**Recorded demonstration result with `qwen3:8b`:** 11/11 evaluation cases passed and 12/12
+generated proofs reproduced. This is a recorded run, not a guarantee: earlier development runs
+scored 8–10/11 because local-model generation can vary. Record the model tag, Ollama version and
+complete `eval.py` output when reporting a new result. The current code fixes temperature at 0 and
+seed at 7, but runtime and model-version differences can still change a plan.
 
 ---
 
@@ -609,17 +760,28 @@ LLM-written code is untrusted. These defences are layered:
 
 ## 16. Testing and quality checks
 
+Install the backend development extra first; the runtime-only `requirements.txt` does not include
+pytest, Ruff or mypy.
+
 ```powershell
 # backend
 cd backend
-.\.venv\Scripts\ruff check . ; .\.venv\Scripts\ruff format --check . ; .\.venv\Scripts\mypy app ; .\.venv\Scripts\pytest
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+.\.venv\Scripts\ruff check .
+.\.venv\Scripts\ruff format --check .
+.\.venv\Scripts\mypy app
+.\.venv\Scripts\python -m pytest
 
-# frontend
+# frontend (from the repository root)
 cd frontend
-npm run lint ; npm run format:check ; npm run test -- --run ; npm run build
+npm ci
+npm run lint
+npm run format:check
+npm run test -- --run
+npm run build
 ```
 
-- **Backend:** 20 pytest tests. They cover:
+- **Backend:** 22 pytest cases currently pass. They cover:
   - the scanner finding every planted demo trap;
   - the AST gate rejecting `os`, `subprocess`, network and absolute paths;
   - proof reproducibility, and hash tampering being detected;
@@ -631,9 +793,30 @@ npm run lint ; npm run format:check ; npm run test -- --run ; npm run build
   - the API endpoints.
 
   Ruff (E, F, I, B, UP, S, ASYNC; line length 100) and strict mypy also run.
-- **Frontend:** Vitest and Testing Library cover routing, active navigation, legal pages, the
-  not-found page, the skip link and keyboard access. ESLint and Prettier also run.
+- **Frontend:** 7 Vitest tests across 2 files currently pass. Vitest and Testing Library cover
+  routing, active navigation, legal pages, the not-found page, the skip link, keyboard access,
+  proof-seal states and proof-source visualization. ESLint, Prettier and the strict TypeScript
+  production build are separate checks.
 - **Agent accuracy:** `eval.py` (see [section 13](#13-demo-data-and-evaluation)). It needs Ollama.
+
+### Verification snapshot
+
+Checked on 7 October 2026 with Python 3.12.6, Node.js 24.10.0 and npm 11.6.1:
+
+| Check | Result |
+|---|---|
+| Backend `ruff check .` | Passed |
+| Backend `ruff format --check .` | Passed (25 files) |
+| Backend strict `mypy app` | Passed (20 source files) |
+| Backend pytest | Passed (22 tests; one upstream Starlette deprecation warning) |
+| Frontend ESLint | Passed |
+| Frontend Vitest | Passed (7 tests in 2 files) |
+| Frontend production build | Passed (1,970 modules transformed) |
+| Frontend Prettier check | Does not currently pass; it reports style differences in 20 files |
+| Live Ollama evaluation | Not re-run for this documentation update because Ollama was installed but not running |
+
+The formatting difference does not affect runtime behavior, but it should be resolved with
+`npm run format` and reviewed before treating the repository as fully green.
 
 ---
 
